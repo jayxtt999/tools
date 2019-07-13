@@ -1,0 +1,62 @@
+<?php
+/**
+ * mcrypt_encrypt 与 openssl_encrypt兼容 加密解密均一致
+ */
+
+namespace Tools;
+
+
+class Aes
+{
+    private $iv;    // 密钥偏移量IV 生成规则：base64_encode(openssl_random_pseudo_bytes(16))
+    private $key;   // AES key 生成规则：base64_encode(openssl_random_pseudo_bytes(32));
+
+    function __construct($key, $iv)
+    {
+        $this->key = $key;
+        $this->iv  = $iv;
+    }
+
+    /**
+     * @param $plaintext
+     *
+     * @return string
+     * @author xietaotao
+     */
+    public function encrypt($plaintext)
+    {
+        if (version_compare(PHP_VERSION, '7.0.0') >= 0) {
+            if (strlen($plaintext) % 16) {
+                $plaintext = str_pad($plaintext, strlen($plaintext) + 16 - strlen($plaintext) % 16, "\0");
+            }
+
+            return openssl_encrypt($plaintext, "AES-256-CBC", $this->key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $this->iv);
+
+        } else {
+            $ciphertext = mcrypt_encrypt(MCRYPT_RIJNDAEL_128, $this->key, $plaintext, MCRYPT_MODE_CBC, $this->iv);
+
+            return $ciphertext;
+        }
+    }
+
+
+    /**
+     * @param $ciphertext
+     *
+     * @return string
+     * @author xietaotao
+     */
+    public function decrypt($ciphertext)
+    {
+        if (version_compare(PHP_VERSION, '7.0.0') >= 0) {
+            $plaintext = openssl_decrypt($ciphertext, 'AES-256-CBC', $this->key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $this->iv);
+
+            return rtrim($plaintext, "\0");
+        } else {
+            $plaintext = mcrypt_decrypt(MCRYPT_RIJNDAEL_128, $this->key, $ciphertext, MCRYPT_MODE_CBC, $this->iv);
+
+            return rtrim($plaintext, "\0");
+        }
+
+    }
+}
